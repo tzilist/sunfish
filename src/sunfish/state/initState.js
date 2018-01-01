@@ -6,7 +6,7 @@ class State {
   }
 
   update = (transactionId) => {
-    this.state = Object.assign({}, this.transactions[transactionId])
+    this.state = Object.assign({}, this.transactions[transactionId].state);
     delete this.transactions[transactionId];
 
     this.runListeners();
@@ -16,15 +16,46 @@ class State {
     this.listeners.forEach(listener => listener(this.state));
   }
 
-  pipe = (transactionId, action) => {
-    const newState = action(this.transactions[transactionId]);
-
-    this.transactions[transactionId] = newState;
-
-    return {
+  pipe = (transactionId, action, conditional) => {
+    const returnMethods = {
       pipe: this.pipe.bind(this, transactionId),
       update: this.update.bind(this, transactionId),
     };
+
+    const transaction = this.transactions[transactionId];
+
+    if (Object.isFrozen(transaction)) {
+      return returnMethods;
+    }
+    const { state, context } = transaction;
+
+
+    if (conditional && conditional.constructor === Function) {
+      const conditionalResults = conditional(state, context);
+      if (conditionalResults === false) {
+        return returnMethods;
+      }
+    }
+
+    const actionResults = action(state, context);
+
+    // const { newState, newContext } = (actionResults && actionResults.state && actionResults.context)
+    //   ? { newState: actionResults.state, newContext: actionResults.context }
+    //   : { newState: actionResults, newContext: null };
+
+    const newState = (actionResults && actionResults.state) || actionResults;
+    const newContext = (actionResults && actionResults.state && actionResults.context) || null;
+    const shouldBreak = actionResults && actionResults.state && actionResults.break && actionResults.break === true;
+
+
+    this.transactions[transactionId] = { state: newState, context: newContext };
+
+    if (shouldBreak) {
+      Object.freeze(this.transactions[transactionId]);
+    }
+
+    console.log(this.transactions[transactionId])
+    return returnMethods;
   }
 
   createTransaction = () => {
@@ -34,7 +65,7 @@ class State {
       .split('')
       .join('.');
 
-    this.transactions[transactionId] = Object.assign({}, this.state);
+    this.transactions[transactionId] = Object.assign({}, { state: this.state, context: null });
 
     return {
       pipe: this.pipe.bind(this, transactionId),

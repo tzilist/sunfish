@@ -26,6 +26,15 @@ class Counter extends PureComponent {
 
     createTransaction()
       .pipe(counterActions.incrementCounter)
+      // here is an example with a conditional function that will not run since it returns false
+      .pipe(counterActions.incrementCounter, (res) => {
+        console.log('here!')
+        return false;
+      })
+      .pipe(counterActions.decrementCounter)
+      .pipe(counterActions.incrementCounterWithBreak)
+      // this function will never be run since we return a break statement above
+      .pipe(counterActions.decrementCounter)
       .update();
   }
 
