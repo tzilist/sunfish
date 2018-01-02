@@ -36,7 +36,7 @@ It is important to call the update function at the end of your group of function
 
 This function instantiates a new transaction in the state manager. It takes no params and is the first thing that must be called when starting a new chain of functions.
 
-### pipe
+#### pipe
 ```
 pipe(function action(state, context), function conditional (state, context))
 ```
@@ -60,9 +60,19 @@ When `break` is supplied, this tells Sunfish to skip any subsequent steps
 
 When `context` is supplied, data is stored within the transaction. This allows the developer to easily pass data from one call to the next without needing to set it in state explicitly.
 
+
+#### updateAndPipe
+
+Tells Sunfish to merge the current transaction into the current state but allows the developer to continue passing information (such as context) along.
+
+#### update
+
+The final function call, updates the current transaction into state and delete the transaction from memory. Must be called during the final step
+
 Here is a quick example:
 
 ```js
+class User extends React.PureComponent {
   fetchUserData = async () => {
     const data = await fetch('/api/userData');
     // only context is passed here
@@ -118,6 +128,11 @@ Here is a quick example:
     .pipe(this.setUserDataFetchSuccess)
     .update()
   }
+
+  render() {
+    // jsx goes here
+  }
+}
 ```
 
 ### Examples
