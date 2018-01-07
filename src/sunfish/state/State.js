@@ -3,38 +3,54 @@ export default class State {
     this.state = state;
     this.listeners = [];
     this.transactions = {};
-    this.transactionFns = {};
+    this.transactionQueue = {};
   }
 
   update = (transactionId) => {
-    this.transactionFns[transactionId].push({
+    this.transactionQueue[transactionId].queue.push({
       action: this._update.bind(this, transactionId),
       conditional: null,
+      info: {
+        shouldContinueQueue: false,
+        isUpdate: true,
+      },
     });
   }
 
   _update = (transactionId) => {
     this.state = Object.assign({}, this.transactions[transactionId].state);
     delete this.transactions[transactionId];
-    delete this.transactionFns[transactionId];
+    delete this.transactionQueue[transactionId];
 
     this.runListeners();
   }
 
-  updateAndPipe = (transactionId) => {
-    this.transactionFns[transactionId].push({
-      action: this._updateAndPipe.bind(this, transactionId),
+  pipeAndUpdate = (transactionId, action, conditional) => {
+    const updateAction = {
+      action: this._pipeAndUpdate.bind(this, transactionId),
       conditional: null,
-    });
+      info: {
+        isUpdate: true,
+      },
+    };
+
+    const { queue, running } = this.transactionQueue[transactionId];
+
+    queue.push({ action, conditional }, updateAction);
+
+    if (!running) {
+      this.transactionQueue[transactionId].running = true;
+      this.queueRunner(transactionId);
+    }
 
     return {
       pipe: this.pipe.bind(this, transactionId),
       update: this.update.bind(this, transactionId),
-      updateAndPipe: this.updateAndPipe.bind(this, transactionId),
+      pipeAndUpdate: this.pipeAndUpdate.bind(this, transactionId),
     };
   }
 
-  _updateAndPipe = (transactionId) => {
+  _pipeAndUpdate = (transactionId) => {
     this.state = Object.assign({}, this.transactions[transactionId].state);
     this.runListeners();
   }
@@ -43,65 +59,127 @@ export default class State {
     this.listeners.forEach(listener => listener(this.state));
   }
 
-  pipe = (transactionId, action, conditional, skipAddition = false) => {
-    const returnMethods = {
-      pipe: this.pipe.bind(this, transactionId),
-      update: this.update.bind(this, transactionId),
-      updateAndPipe: this.updateAndPipe.bind(this, transactionId),
-    };
-
-    const transactionFns = this.transactionFns[transactionId];
-    
-    this.transactionFns[transactionId].push({ action, conditional });
-    if (!skipAddition && transactionFns && transactionFns.length > 1) {
-      return returnMethods;
+  queueRunner = (transactionId) => {
+    const { queue, queueIndex } = this.transactionQueue[transactionId];
+    if (!queue[queueIndex]) {
+      this.transactionQueue[transactionId].running = false;
+      return null;
     }
+
+    const { action, conditional, info } = queue[queueIndex];
 
     const transaction = this.transactions[transactionId];
 
-    if (Object.isFrozen(transaction)) {
-      return returnMethods;
+    if (Object.isFrozen(transaction) && (!info || (info && info.isUpdate !== true))) {
+      this.transactionQueue[transactionId].queueIndex += 1;
+      return this.queueRunner(transactionId);
     }
+
     const { state, context } = transaction;
-    if (conditional && conditional.constructor === Function) {
-      const conditionalResults = conditional(state, context);
-      if (conditionalResults === false) {
-        this.transactionFns[transactionId].shift();
-        if (Array.isArray(this.transactionFns[transactionId]) && this.transactionFns[transactionId].length > 0) {
-          const { action: nextAction, conditional: nextConditional } = this.transactionFns[transactionId][0];
-          this.pipe(transactionId, nextAction, nextConditional, true);
+
+    if (conditional) {
+      if (conditional && conditional.constructor === Function) {
+        const conditionalResults = conditional(state, context);
+        if (conditionalResults === false) {
+          this.transactionQueue[transactionId].queueIndex += 1;
+          return this.queueRunner(transactionId);
         }
-        return returnMethods;
       }
     }
 
-    Promise.resolve(action(state, context))
+    return Promise.resolve(action(state, context))
       .then((actionResults) => {
-        const newContext = (actionResults && actionResults.context) || null;
+        const newContext = (actionResults && actionResults.context) || context;
         const shouldBreak = actionResults && actionResults.break && actionResults.break === true;
-        let newState = state;
+        const newState = (actionResults && actionResults.state) || state;
     
-        if (actionResults && actionResults.state) {
-          newState = actionResults.state;
-        } else if (actionResults && !actionResults.context && !actionResults.break) {
-          newState = actionResults;
-        }
-
         this.transactions[transactionId] = { state: newState, context: newContext };
     
         if (shouldBreak === true) {
           Object.freeze(this.transactions[transactionId]);
         }
-        if (Array.isArray(this.transactionFns[transactionId])) {
-          this.transactionFns[transactionId].shift();
-          if (this.transactionFns[transactionId].length > 0) {
-            const { action: nextAction, conditional: nextConditional } = this.transactionFns[transactionId][0];
-            this.pipe(transactionId, nextAction, nextConditional, true);
-          }
-        }
-      });
 
-    return returnMethods;
+        if (info && info.shouldContinueQueue === false) {
+          return null;
+        }
+
+        this.transactionQueue[transactionId].queueIndex += 1;
+        return this.queueRunner(transactionId);
+      });
+  }
+
+  pipe = (transactionId, action, conditional) => {
+    const { queue, running } = this.transactionQueue[transactionId];
+
+    queue.push({ action, conditional });
+
+    if (!running) {
+      this.transactionQueue[transactionId].running = true;
+      this.queueRunner(transactionId);
+    }
+
+    return {
+      pipe: this.pipe.bind(this, transactionId),
+      update: this.update.bind(this, transactionId),
+      pipeAndUpdate: this.pipeAndUpdate.bind(this, transactionId),
+    };
+
+    
+    
+    // if (!skipAddition && transactionQueue && transactionQueue.length > 1) {
+    //   this.transactionQueue[transactionId].push({ action, conditional });
+    //   return returnMethods;
+    // }
+
+    
+    // const transaction = this.transactions[transactionId];
+    // if (Object.isFrozen(transaction)) {
+    //   this.transactionQueue[transactionId].shift();
+    //   if (Array.isArray(this.transactionQueue[transactionId]) && this.transactionQueue[transactionId].length > 0) {
+    //     const { action: nextAction, conditional: nextConditional } = this.transactionQueue[transactionId][0];
+    //     this.pipe(transactionId, nextAction, nextConditional, true);
+    //   }
+    //   return returnMethods;
+    // }
+    
+    // const { state, context } = transaction;
+    // if (conditional && conditional.constructor === Function) {
+    //   const conditionalResults = conditional(state, context);
+    //   if (conditionalResults === false) {
+    //     this.transactionQueue[transactionId].shift();
+    //     if (Array.isArray(this.transactionQueue[transactionId]) && this.transactionQueue[transactionId].length > 0) {
+    //       const { action: nextAction, conditional: nextConditional } = this.transactionQueue[transactionId][0];
+    //       this.pipe(transactionId, nextAction, nextConditional, true);
+    //     }
+    //     return returnMethods;
+    //   }
+    // }
+
+    // Promise.resolve(action(state, context))
+    //   .then((actionResults) => {
+    //     const newContext = (actionResults && actionResults.context) || null;
+    //     const shouldBreak = actionResults && actionResults.break && actionResults.break === true;
+    //     let newState = state;
+    
+    //     if (actionResults && actionResults.state) {
+    //       newState = actionResults.state;
+    //     } else if (actionResults && !actionResults.context && !actionResults.break) {
+    //       newState = actionResults;
+    //     }
+
+    //     this.transactions[transactionId] = { state: newState, context: newContext };
+    
+    //     if (shouldBreak === true) {
+    //       Object.freeze(this.transactions[transactionId]);
+    //     }
+    //     if (Array.isArray(this.transactionQueue[transactionId])) {
+    //       this.transactionQueue[transactionId].shift();
+    //       if (this.transactionQueue[transactionId].length > 0) {
+    //         const { action: nextAction, conditional: nextConditional } = this.transactionQueue[transactionId][0];
+    //         this.pipe(transactionId, nextAction, nextConditional, true);
+    //       }
+    //     }
+    //   });
   }
 
   createTransaction = () => {
@@ -112,11 +190,11 @@ export default class State {
       .join('.');
 
     this.transactions[transactionId] = Object.assign({}, { state: this.state, context: null });
-    this.transactionFns[transactionId] = [];
+    this.transactionQueue[transactionId] = { queue: [], running: false, queueIndex: 0 };
     return {
       pipe: this.pipe.bind(this, transactionId),
       update: this.update.bind(this, transactionId),
-      updateAndPipe: this.updateAndPipe.bind(this, transactionId),
+      pipeAndUpdate: this.pipeAndUpdate.bind(this, transactionId),
     };
   }
 

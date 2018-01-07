@@ -21,9 +21,8 @@ Sunfish creates a transaction and does not update the state until the transactio
  const { createTransaction } = this.props;
 
  createTransaction()
-  .pipe(this.props.someAction)
-  .updateAndPipe()
   .pipe(this.someComponentFunction)
+  .pipeAndUpdate(this.props.someAction)
   .pipe(this.props.someOtherAction)
   .update();
 ```
@@ -61,7 +60,7 @@ When `break` is supplied, this tells Sunfish to skip any subsequent steps
 When `context` is supplied, data is stored within the transaction. This allows the developer to easily pass data from one call to the next without needing to set it in state explicitly.
 
 
-#### updateAndPipe
+#### pipeAndUpdate
 
 Tells Sunfish to merge the current transaction into the current state but allows the developer to continue passing information (such as context) along.
 
@@ -85,8 +84,10 @@ class User extends React.PureComponent {
     // The return here does not have state, context, or break key
     // Sunfish assumes the return is the new state
     return {
-      ...state,
-      userFetchPending: true,
+      state: {
+        ...state,
+        userFetchPending: true,
+      }
     }
   }
 
@@ -110,9 +111,11 @@ class User extends React.PureComponent {
   setUserDataFetchSuccess = (state, { data }) => {
     const results = data.json();
     return {
-      ...state,
-      user: results.user
-      userFetchPending: false,
+      state: {
+        ...state,
+        user: results.user
+        userFetchPending: false,
+      },
     }
   }
 
@@ -121,8 +124,7 @@ class User extends React.PureComponent {
    const { createTransaction } = this.props;
   
    createTransaction()
-    .pipe(this.setUserDataFetchPending)
-    .updateAndPipe()
+    .pipeAndUpdate(this.setUserDataFetchPending)
     .pipe(this.fetchUserData)
     .pipe(this.setUserDataFetchError, this.checkForFetchError)
     .pipe(this.setUserDataFetchSuccess)

@@ -35,8 +35,7 @@ class Counter extends PureComponent {
 
    
     createTransaction()
-      .pipe(this.setIsFetchingData)
-      .updateAndPipe()
+      .pipeAndUpdate(this.setIsFetchingData)
       .pipe(this.fetchBeerData)
       .pipe(this.setDataFetchError, this.checkForFetchError)
       .pipe(this.setDataFetchSuccess)
@@ -47,8 +46,10 @@ class Counter extends PureComponent {
   // Sunfish assumes the return is the new state
   setIsFetchingData = state => (
     {
-      ...state,
-      isFetchingData: true,
+      state: {
+        ...state,
+        isFetchingData: true,
+      },
     }
   )
 
@@ -70,10 +71,12 @@ class Counter extends PureComponent {
   setDataFetchSuccess = async (state, { data }) => {
     const results = await data.json();
     return {
-      ...state,
-      data: results,
-      fetchDataSuccess: true,
-      isFetchingData: false,
+      state: {
+        ...state,
+        data: results,
+        fetchDataSuccess: true,
+        isFetchingData: false,
+      },
     };
   }
 
