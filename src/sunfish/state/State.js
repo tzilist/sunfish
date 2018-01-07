@@ -70,6 +70,12 @@ export default class State {
 
     const transaction = this.transactions[transactionId];
 
+    /**
+     * Here we check if the object is frozen (i.e. a break statement was declared)
+     * Even if it is frozen, we do want to run the function if it is and update so we check to see if
+     * Info is not set (in which case it is a user defined function)
+     * Info is set, but 'isUpdate' is not true
+     */
     if (Object.isFrozen(transaction) && (!info || (info && info.isUpdate !== true))) {
       this.transactionQueue[transactionId].queueIndex += 1;
       return this.queueRunner(transactionId);
