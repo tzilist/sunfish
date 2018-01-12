@@ -1,5 +1,7 @@
 # Sunfish
 
+Sunfish is a functional transaction based state management library. Updating React can be expensive. Updates to state only happen when the developer deems it necessary.
+
 ### API
 
 Sunfish has a fairly intuitive, functionaly driven api. The basic usage is as such
@@ -41,7 +43,7 @@ pipe(function action(state, context), function conditional (state, context))
 ```
 
 
-The pipe function takes in an action callback and a conditional callback. If passed a conditional callback, the pipe function will check whether the callback returns true or false. If it returns false, the action will not be run. 
+The pipe function takes in an action callback and a conditional callback. If passed a conditional callback, the pipe function will check whether the callback returns true or false. If it returns false, the action will not be run.
 
 The actions supplied to pipe can return several things. The most notible is that they may return any of the following keys in their return object
 
@@ -53,9 +55,9 @@ The actions supplied to pipe can return several things. The most notible is that
 }
 ```
 
-If none of these are supplied, it is assumed that the returned object is the new state.
+If nothing is returned, the previous `state` and `context` are preserved from other actions preformed in the transaction. This can be useful when work needs to be preformed in the view layer without updating the transaction/state.
 
-When `break` is supplied, this tells Sunfish to skip any subsequent steps
+When `break` is supplied, this tells Sunfish to skip any subsequent steps (except for the `update` function).
 
 When `context` is supplied, data is stored within the transaction. This allows the developer to easily pass data from one call to the next without needing to set it in state explicitly.
 
@@ -122,7 +124,7 @@ class User extends React.PureComponent {
 
   componentDidMount() {
    const { createTransaction } = this.props;
-  
+
    createTransaction()
     .pipeAndUpdate(this.setUserDataFetchPending)
     .pipe(this.fetchUserData)
@@ -173,7 +175,7 @@ export const incrementCounterWithBreak = ({ counter }) => (
 export const fetchData = async (state) => {
   const data = await fetch('http://mysite.com/api')
     .then(res => res.json);
-  
+
   return { state, context: data };
 }
 
@@ -235,19 +237,9 @@ class Counter extends PureComponent {
   render() {
     return (
       <React.Fragment>
-        <button
-          onClick={this.onIncreaseHandler}
-          style={{ cursor: 'pointer', display: 'inline-block' }}
-        >
-          +
-        </button>
-        {this.props.counter}
-        <button
-          onClick={this.onDecreaseHandler}
-          style={{ cursor: 'pointer', display: 'inline-block' }}
-        >
-          -
-        </button>
+        <button onClick={this.onIncreaseHandler}>+</button>
+          {this.props.counter}
+        <button onClick={this.onDecreaseHandler}>-</button>
       </React.Fragment>
     );
   }

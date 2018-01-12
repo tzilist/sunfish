@@ -26,10 +26,6 @@ class Counter extends PureComponent {
     createTransaction: func.isRequired,
   }
 
-  componentDidUpdate() {
-    console.log(this.props)
-  }
-
   async componentDidMount() {
     const { createTransaction } = this.props;
 
