@@ -33,7 +33,7 @@ class Counter extends PureComponent {
   async componentDidMount() {
     const { createTransaction } = this.props;
 
-   
+
     createTransaction()
       .pipeAndUpdate(this.setIsFetchingData)
       .pipe(this.fetchBeerData)
@@ -92,11 +92,24 @@ class Counter extends PureComponent {
 
 
   render() {
-    return (
-      <React.Fragment>
-        Pending...
-      </React.Fragment>
-    );
+    const {
+      fetchDataError,
+      fetchDataSuccess,
+      isFetchingData,
+    } = this.props;
+    if (isFetchingData) {
+      return 'Pending';
+    }
+
+    if (fetchDataError) {
+      return 'Error fetching data :(';
+    }
+
+    if (fetchDataSuccess) {
+      const { data } = this.props;
+      return data.map(el => <div>{el.name}</div>);
+    }
+    return null;
   }
 }
 
