@@ -2,6 +2,16 @@
 
 Sunfish is a functional transaction based state management library. Updating React can be expensive. Updates to state only happen when the developer deems it necessary.
 
+### Getting started
+run either
+```bash
+npm install sunfish
+```
+or
+```bash
+yarn add sunfish
+```
+
 ### API
 
 Sunfish has a fairly intuitive, functionaly driven api. The basic usage is as such
@@ -143,7 +153,8 @@ class User extends React.PureComponent {
 
 First, we need to initialize our state.
 ```js
-import { initState } from '../sunfish';
+// state.js
+import { initState } from 'sunfish';
 
 const INITIAL_STATE = {
   counter: 0,
@@ -154,6 +165,29 @@ export default initState(INITIAL_STATE);
 
 ```
 
+Next, let's connect our state to our app
+
+```js
+// app.js
+import React from 'react';
+import ReactDOM from 'react-dom';
+
+import { Provider } from 'sunfish';
+
+import Counter from './components/Counter';
+import state from './state';
+
+const rootEl = document.getElementById('root');
+
+const render = () => ReactDOM.render(
+  <Provider state={state}>
+    <Counter />
+  </Provider>,
+  rootEl,
+);
+
+render();
+```
 
 Now we need to create our actions
 ```js
@@ -186,7 +220,7 @@ export const fetchData = async (state) => {
 ```js
 // components/Counter.js
 
-import connect from '../sunfish/react/connect';
+import { connect } from 'sunfish';
 import * as CounterActions from '../actions/counter';
 
 const mapStateToProps = (state) => {

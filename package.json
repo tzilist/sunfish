@@ -1,20 +1,14 @@
 {
-  "name": "simple",
+  "name": "sunfish",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "dependencies": {
     "hoist-non-react-statics": "^2.3.1",
     "prop-types": "^15.6.0",
     "react": "^16.2.0",
-    "react-dom": "^16.2.0",
-    "react-scripts": "1.0.17"
+    "react-dom": "^16.2.0"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
-  },
+  "scripts": {},
   "devDependencies": {
     "babel-eslint": "7",
     "eslint": "3.x",
