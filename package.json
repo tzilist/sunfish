@@ -1,6 +1,6 @@
 {
   "name": "sunfish",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "dependencies": {
     "hoist-non-react-statics": "^2.3.1",
