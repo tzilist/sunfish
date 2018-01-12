@@ -5,6 +5,15 @@ import hoistStatics from 'hoist-non-react-statics';
 export default function connect(mapStateToProps, mapActionsToProps) {
   return (Child) => {
     class Wrapper extends Component {
+      constructor(props) {
+        super(props);
+
+        this.childPropsMappedState = null;
+
+        this.getChildProps = this.getChildProps.bind(this);
+        this.update = this.update.bind(this);
+      }
+
       componentDidMount() {
         const { store } = this.context;
         store.subscribe(this.update);
@@ -20,7 +29,7 @@ export default function connect(mapStateToProps, mapActionsToProps) {
       }
 
 
-      getChildProps = () => {
+      getChildProps() {
         const { store } = this.context;
         const { state } = store;
         let stateProps = {};
@@ -46,9 +55,7 @@ export default function connect(mapStateToProps, mapActionsToProps) {
         return childProps;
       }
 
-      childPropsMappedState = null;
-
-      update = (newState) => {
+      update(newState) {
         if (this.childPropsMappedState && newState) {
           const newProps = mapStateToProps(newState);
           const childKeys = Object.keys(this.childPropsMappedState);
@@ -69,7 +76,7 @@ export default function connect(mapStateToProps, mapActionsToProps) {
 
           return null;
         }
-      };
+      }
 
       render() {
         return createElement(Child, this.getChildProps());

@@ -4,9 +4,20 @@ export default class State {
     this.listeners = [];
     this.transactions = {};
     this.transactionQueue = {};
+
+    this.update = this.update.bind(this);
+    this._update = this._update.bind(this);
+    this.pipeAndUpdate = this.pipeAndUpdate.bind(this);
+    this._pipeAndUpdate = this._pipeAndUpdate.bind(this);
+    this.runListeners = this.runListeners.bind(this);
+    this.queueRunner = this.queueRunner.bind(this);
+    this.pipe = this.pipe.bind(this);
+    this.createTransaction = this.createTransaction.bind(this);
+    this.subscribe = this.subscribe.bind(this);
+    this.unsubscribe = this.unsubscribe.bind(this);
   }
 
-  update = (transactionId) => {
+  update(transactionId) {
     this.transactionQueue[transactionId].queue.push({
       action: this._update.bind(this, transactionId),
       conditional: null,
@@ -17,7 +28,7 @@ export default class State {
     });
   }
 
-  _update = (transactionId) => {
+  _update(transactionId) {
     this.state = Object.assign({}, this.transactions[transactionId].state);
     delete this.transactions[transactionId];
     delete this.transactionQueue[transactionId];
@@ -25,7 +36,7 @@ export default class State {
     this.runListeners();
   }
 
-  pipeAndUpdate = (transactionId, action, conditional) => {
+  pipeAndUpdate(transactionId, action, conditional) {
     const updateAction = {
       action: this._pipeAndUpdate.bind(this, transactionId),
       conditional: null,
@@ -50,16 +61,16 @@ export default class State {
     };
   }
 
-  _pipeAndUpdate = (transactionId) => {
+  _pipeAndUpdate(transactionId) {
     this.state = Object.assign({}, this.transactions[transactionId].state);
     this.runListeners();
   }
 
-  runListeners = () => {
+  runListeners() {
     this.listeners.forEach(listener => listener(this.state));
   }
 
-  queueRunner = (transactionId) => {
+  queueRunner(transactionId) {
     const { queue, queueIndex } = this.transactionQueue[transactionId];
     if (!queue[queueIndex]) {
       this.transactionQueue[transactionId].running = false;
@@ -98,9 +109,9 @@ export default class State {
         const newContext = (actionResults && actionResults.context) || context;
         const shouldBreak = actionResults && actionResults.break && actionResults.break === true;
         const newState = (actionResults && actionResults.state) || state;
-    
+
         this.transactions[transactionId] = { state: newState, context: newContext };
-    
+
         if (shouldBreak === true) {
           Object.freeze(this.transactions[transactionId]);
         }
@@ -114,7 +125,7 @@ export default class State {
       });
   }
 
-  pipe = (transactionId, action, conditional) => {
+  pipe(transactionId, action, conditional) {
     const { queue, running } = this.transactionQueue[transactionId];
 
     queue.push({ action, conditional });
@@ -129,66 +140,9 @@ export default class State {
       update: this.update.bind(this, transactionId),
       pipeAndUpdate: this.pipeAndUpdate.bind(this, transactionId),
     };
-
-    
-    
-    // if (!skipAddition && transactionQueue && transactionQueue.length > 1) {
-    //   this.transactionQueue[transactionId].push({ action, conditional });
-    //   return returnMethods;
-    // }
-
-    
-    // const transaction = this.transactions[transactionId];
-    // if (Object.isFrozen(transaction)) {
-    //   this.transactionQueue[transactionId].shift();
-    //   if (Array.isArray(this.transactionQueue[transactionId]) && this.transactionQueue[transactionId].length > 0) {
-    //     const { action: nextAction, conditional: nextConditional } = this.transactionQueue[transactionId][0];
-    //     this.pipe(transactionId, nextAction, nextConditional, true);
-    //   }
-    //   return returnMethods;
-    // }
-    
-    // const { state, context } = transaction;
-    // if (conditional && conditional.constructor === Function) {
-    //   const conditionalResults = conditional(state, context);
-    //   if (conditionalResults === false) {
-    //     this.transactionQueue[transactionId].shift();
-    //     if (Array.isArray(this.transactionQueue[transactionId]) && this.transactionQueue[transactionId].length > 0) {
-    //       const { action: nextAction, conditional: nextConditional } = this.transactionQueue[transactionId][0];
-    //       this.pipe(transactionId, nextAction, nextConditional, true);
-    //     }
-    //     return returnMethods;
-    //   }
-    // }
-
-    // Promise.resolve(action(state, context))
-    //   .then((actionResults) => {
-    //     const newContext = (actionResults && actionResults.context) || null;
-    //     const shouldBreak = actionResults && actionResults.break && actionResults.break === true;
-    //     let newState = state;
-    
-    //     if (actionResults && actionResults.state) {
-    //       newState = actionResults.state;
-    //     } else if (actionResults && !actionResults.context && !actionResults.break) {
-    //       newState = actionResults;
-    //     }
-
-    //     this.transactions[transactionId] = { state: newState, context: newContext };
-    
-    //     if (shouldBreak === true) {
-    //       Object.freeze(this.transactions[transactionId]);
-    //     }
-    //     if (Array.isArray(this.transactionQueue[transactionId])) {
-    //       this.transactionQueue[transactionId].shift();
-    //       if (this.transactionQueue[transactionId].length > 0) {
-    //         const { action: nextAction, conditional: nextConditional } = this.transactionQueue[transactionId][0];
-    //         this.pipe(transactionId, nextAction, nextConditional, true);
-    //       }
-    //     }
-    //   });
   }
 
-  createTransaction = () => {
+  createTransaction() {
     const transactionId = Math.random()
       .toString(36)
       .substring(7)
@@ -204,11 +158,11 @@ export default class State {
     };
   }
 
-  subscribe = (listener) => {
+  subscribe(listener) {
     this.listeners.push(listener);
   }
 
-  unsubscribe = (listener) => {
+  unsubscribe(listener) {
     this.listners = this.listeners.filter(el => el !== listener);
   }
 }

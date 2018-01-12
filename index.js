@@ -1,5 +1,5 @@
-import initState from './src/sunfish/state/initState';
-import connect from './src/sunfish/react/connect';
-import Provider from './src/sunfish/react/Provider';
+import initState from './src/state/initState';
+import connect from './src/react/connect';
+import Provider from './src/react/Provider';
 
 export { initState, connect, Provider };
