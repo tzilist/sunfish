@@ -103,7 +103,7 @@ class User extends React.PureComponent {
     }
   }
 
-  checkForFetchError = (state, context) => context.status !== 200;
+  checkForFetchError = (state, { data }) => data.status !== 200;
 
   setUserDataFetchError = (state) => {
     // This function will tell Sunfish to skip any subsequent steps
